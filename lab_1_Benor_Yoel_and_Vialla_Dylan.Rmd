@@ -1,0 +1,515 @@
+---
+title: "52414 - lab 1"
+author: "52414"
+date: "4/4/2020"
+output: html_document
+---
+
+# *Lab 1: Basic Data Wrangling*  
+<br/><br/>  
+  
+
+**Contents**:  
+
+* Q0) [Submission Instructions](#submission-instructions)  
+* Q1) [Data Preparation and Manipulation](#data-preparation-and-manipulation)      
+* Q2) [Analysis of Daily New Corona Cases and Deaths](#analysis-of-daily-new-corona-cases-and-deaths)    
+* Q3) [Preparing and Analyzing the World Bank Data](#preparing-and-analyzing-the-world-bank-data)
+* Q4) [Joining the Datasets](#joining-the-datasets)  
+* Q5) [Open Question](#open-question)
+
+<br/><br/>
+  
+  
+### Submission Instructions  
+  
+This lab will be submitted in pairs using GitHub (if you don't have a pair, please contact us).  
+Please follow the steps in the  [GitHub-Classroom Lab 1](https://classroom.github.com/g/oSZNtHq4) to create your group's Lab 1 repository.  
+**Important: your team's name must be `FamilyName1_Name1_and_FamilyName2_Name2`**.  
+You can collaborate with your partner using the git environment; You can either make commits straight to master, or create individual branches (recommended). However, once done, be sure to merge your branches to master - you will be graded using the most recent master version - your last push and merge before the deadline.   
+**Please do not open/review other peoples' repositories - we will be notified by GitHub if you do.**
+
+Your final push should include this Rmd file (with your answers) together with the html file that is outputted automatically by knitr when you knit the Rmd. Anything else will be disregarded. In addition, please adhere to the following file format:    
+`Lab_2_FamilyName1_Name1_and_FamilyName2_Name2.Rmd/html`      
+
+
+<br/><br/>
+  
+The only allowed libraries are the following (**please do not add your own**):
+```{r, include=FALSE}
+library('tidyverse')
+library(data.table)
+```  
+<br/><br/>
+
+## A Deeper Dive Into John's Hopkins Corona Database         
+    
+The John's Hopkins Novel Corona Virus (COVID-19) epidemiological data is compiled by the Johns Hopkins University Center for Systems Science and Engineering (JHU CCSE) from various sources. <br>
+The dataset contains data since 22nd of January 2020. For the data and more information about it, please visit [here](https://data.humdata.org/dataset/novel-coronavirus-2019-ncov-cases).    
+  
+In this lab you will pick up where we left in lecture 2 and analyze the Corona cases and deaths data.  
+
+### Q1
+### Data Preparation and Manipulation   
+(25 points)  
+
+1. We first prepare and aggregate the data.   
+
+a. First, load the `Corona Confirmed Cases Narrow`, the `Corona Confirmed Deaths Narrow`, and the `Corona Confirmed Recovered Narrow` datasets directly from the John's Hopkins website.  
+The type of the `Date` variable should be date type. (2 pts)      
+b. Create new data-frames named `cases.agg`, `deaths.agg`, and `recovered.agg` which aggregate the `sum` of Corona cases, deaths, and recovered respectively over the different countries' provinces. To do this, aggregate `Value` using only the country and date features, ignoring all other features (similarly to what has been shown in `lecture 2`).  
+To achieve the aggregation use the `aggregate` function. In addition, order the data-frame first by Country and then by Date (increasing order). The columns of each of the two resulting data-frames should be `Country.Region, Date, Value`. (5pts)   
+c. Repeat (b) using `tidyverse` and the pipe. Show that the outputs from the two methods are the same. (5pts)  
+d. Using the last day of March as a reference, create a single stacked bar-plot that visualizes the top 10 countries in terms of their Corona cases, and their respected Corona deaths and recovered cases stacked on top of the current sick people in three different colors (each stack should add up to total cases). Make sure that the first bar shows the number of confirmed Corona sick people (`sick = cases - deaths - recovered`). What is the biggest issue with the information presented in this plot? (13pts)
+
+   
+  
+**Solution:**  
+
+### Q1
+#### a
+```{r}
+conf.cases.input<-read.csv(url("https://data.humdata.org/hxlproxy/data/download/time_series_covid19_confirmed_global_narrow.csv?dest=data_edit&filter01=explode&explode-header-att01=date&explode-value-att01=value&filter02=rename&rename-oldtag02=%23affected%2Bdate&rename-newtag02=%23date&rename-header02=Date&filter03=rename&rename-oldtag03=%23affected%2Bvalue&rename-newtag03=%23affected%2Binfected%2Bvalue%2Bnum&rename-header03=Value&filter04=clean&clean-date-tags04=%23date&filter05=sort&sort-tags05=%23date&sort-reverse05=on&filter06=sort&sort-tags06=%23country%2Bname%2C%23adm1%2Bname&tagger-match-all=on&tagger-default-tag=%23affected%2Blabel&tagger-01-header=province%2Fstate&tagger-01-tag=%23adm1%2Bname&tagger-02-header=country%2Fregion&tagger-02-tag=%23country%2Bname&tagger-03-header=lat&tagger-03-tag=%23geo%2Blat&tagger-04-header=long&tagger-04-tag=%23geo%2Blon&header-row=1&url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_confirmed_global.csv"), comment.char="#")
+
+conf.deaths.input<-read.csv(url("https://data.humdata.org/hxlproxy/data/download/time_series_covid19_deaths_global_narrow.csv?dest=data_edit&filter01=merge&merge-url01=https%3A%2F%2Fdocs.google.com%2Fspreadsheets%2Fd%2Fe%2F2PACX-1vTglKQRXpkKSErDiWG6ycqEth32MY0reMuVGhaslImLjfuLU0EUgyyu2e-3vKDArjqGX7dXEBV8FJ4f%2Fpub%3Fgid%3D1326629740%26single%3Dtrue%26output%3Dcsv&merge-keys01=%23country%2Bname&merge-tags01=%23country%2Bcode%2C%23region%2Bmain%2Bcode%2C%23region%2Bsub%2Bcode%2C%23region%2Bintermediate%2Bcode&filter02=merge&merge-url02=https%3A%2F%2Fdocs.google.com%2Fspreadsheets%2Fd%2Fe%2F2PACX-1vTglKQRXpkKSErDiWG6ycqEth32MY0reMuVGhaslImLjfuLU0EUgyyu2e-3vKDArjqGX7dXEBV8FJ4f%2Fpub%3Fgid%3D398158223%26single%3Dtrue%26output%3Dcsv&merge-keys02=%23adm1%2Bname&merge-tags02=%23country%2Bcode%2C%23region%2Bmain%2Bcode%2C%23region%2Bsub%2Bcode%2C%23region%2Bintermediate%2Bcode&merge-replace02=on&merge-overwrite02=on&filter03=explode&explode-header-att03=date&explode-value-att03=value&filter04=rename&rename-oldtag04=%23affected%2Bdate&rename-newtag04=%23date&rename-header04=Date&filter05=rename&rename-oldtag05=%23affected%2Bvalue&rename-newtag05=%23affected%2Binfected%2Bvalue%2Bnum&rename-header05=Value&filter06=clean&clean-date-tags06=%23date&filter07=sort&sort-tags07=%23date&sort-reverse07=on&filter08=sort&sort-tags08=%23country%2Bname%2C%23adm1%2Bname&tagger-match-all=on&tagger-default-tag=%23affected%2Blabel&tagger-01-header=province%2Fstate&tagger-01-tag=%23adm1%2Bname&tagger-02-header=country%2Fregion&tagger-02-tag=%23country%2Bname&tagger-03-header=lat&tagger-03-tag=%23geo%2Blat&tagger-04-header=long&tagger-04-tag=%23geo%2Blon&header-row=1&url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_deaths_global.csv"),comment.char="#")
+
+conf.recovered.input<-read.csv(url("https://data.humdata.org/hxlproxy/data/download/time_series_covid19_recovered_global_narrow.csv?dest=data_edit&filter01=merge&merge-url01=https%3A%2F%2Fdocs.google.com%2Fspreadsheets%2Fd%2Fe%2F2PACX-1vTglKQRXpkKSErDiWG6ycqEth32MY0reMuVGhaslImLjfuLU0EUgyyu2e-3vKDArjqGX7dXEBV8FJ4f%2Fpub%3Fgid%3D1326629740%26single%3Dtrue%26output%3Dcsv&merge-keys01=%23country%2Bname&merge-tags01=%23country%2Bcode%2C%23region%2Bmain%2Bcode%2C%23region%2Bsub%2Bcode%2C%23region%2Bintermediate%2Bcode&filter02=merge&merge-url02=https%3A%2F%2Fdocs.google.com%2Fspreadsheets%2Fd%2Fe%2F2PACX-1vTglKQRXpkKSErDiWG6ycqEth32MY0reMuVGhaslImLjfuLU0EUgyyu2e-3vKDArjqGX7dXEBV8FJ4f%2Fpub%3Fgid%3D398158223%26single%3Dtrue%26output%3Dcsv&merge-keys02=%23adm1%2Bname&merge-tags02=%23country%2Bcode%2C%23region%2Bmain%2Bcode%2C%23region%2Bsub%2Bcode%2C%23region%2Bintermediate%2Bcode&merge-replace02=on&merge-overwrite02=on&filter03=explode&explode-header-att03=date&explode-value-att03=value&filter04=rename&rename-oldtag04=%23affected%2Bdate&rename-newtag04=%23date&rename-header04=Date&filter05=rename&rename-oldtag05=%23affected%2Bvalue&rename-newtag05=%23affected%2Binfected%2Bvalue%2Bnum&rename-header05=Value&filter06=clean&clean-date-tags06=%23date&filter07=sort&sort-tags07=%23date&sort-reverse07=on&filter08=sort&sort-tags08=%23country%2Bname%2C%23adm1%2Bname&tagger-match-all=on&tagger-default-tag=%23affected%2Blabel&tagger-01-header=province%2Fstate&tagger-01-tag=%23adm1%2Bname&tagger-02-header=country%2Fregion&tagger-02-tag=%23country%2Bname&tagger-03-header=lat&tagger-03-tag=%23geo%2Blat&tagger-04-header=long&tagger-04-tag=%23geo%2Blon&header-row=1&url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_recovered_global.csv"), comment.char="#")
+conf.cases <- conf.cases.input[c('Country.Region','Date','Value')]
+conf.deaths <- conf.deaths.input[c('Country.Region','Date','Value')]
+conf.recovered <- conf.recovered.input[c('Country.Region','Date','Value')]
+conf.cases$Date=as.Date((conf.cases$Date))
+conf.deaths$Date=as.Date(conf.deaths$Date)
+conf.recovered$Date=as.Date((conf.recovered$Date))
+
+```
+#### b.
+```{r}
+prep.cases.agg<-aggregate(conf.cases$Value~conf.cases$Country.Region+conf.cases$Date, data=conf.cases, FUN=sum)
+prep.deaths.agg<-aggregate(conf.deaths$Value~conf.deaths$Country.Region+conf.deaths$Date, data=conf.deaths, FUN=sum)
+prep.recovered.agg<-aggregate(conf.recovered$Value~conf.recovered$Country.Region+conf.recovered$Date, data=conf.recovered, FUN=sum)
+srted<-c(order(prep.cases.agg$`conf.cases$Country.Region`))
+cntry<-rep("NA", nrow(prep.cases.agg))
+dtz<-rep(as.Date('2020-01-22'),nrow(prep.cases.agg))
+vlz<-rep(NA,nrow(prep.cases.agg))
+
+for (i in 1:nrow(prep.cases.agg)){
+  cntry[i]<-as.character(prep.cases.agg[srted[i],1])
+  dtz[i]<-as.Date(prep.cases.agg[srted[i],2])
+  vlz[i]<-prep.cases.agg[srted[i],3]
+}
+cases.agg<-data.frame(
+  Country.Region=cntry,
+  Date=dtz,
+  Value=vlz
+)
+cntry<-rep("NA", nrow(prep.deaths.agg))
+dtz<-rep(as.Date('2020-01-22'),nrow(prep.deaths.agg))
+vlz<-rep(NA,nrow(prep.deaths.agg))
+
+for (i in 1:nrow(prep.deaths.agg)){
+  cntry[i]<-as.character(prep.deaths.agg[srted[i],1])
+  dtz[i]<-as.Date(prep.deaths.agg[srted[i],2])
+  vlz[i]<-prep.deaths.agg[srted[i],3]
+}
+deaths.agg<-data.frame(
+  Country.Region=cntry,
+  Date=dtz,
+  Value=vlz
+)
+cntry<-rep("NA", nrow(prep.recovered.agg))
+dtz<-rep(as.Date('2020-01-22'),nrow(prep.recovered.agg))
+vlz<-rep(NA,nrow(prep.recovered.agg))
+
+
+for (i in 1:nrow(prep.recovered.agg)){
+  cntry[i]<-as.character(prep.recovered.agg[srted[i],1])
+  dtz[i]<-as.Date(prep.recovered.agg[srted[i],2])
+  vlz[i]<-prep.recovered.agg[srted[i],3]
+}
+recovered.agg<-data.frame(
+  Country.Region=cntry,
+  Date=dtz,
+  Value=vlz
+)
+print(head(cases.agg))
+print(head(deaths.agg))
+print(head(recovered.agg))
+```
+#### c
+```{r}
+cases.agg1<-group_by(conf.cases,Country.Region=conf.cases$Country.Region,Date=conf.cases$Date)%>% summarise(Value=sum(Value))
+deaths.agg1<-group_by(conf.deaths,Country.Region=conf.deaths$Country.Region,Date=conf.deaths$Date)%>% summarise(Value=sum(Value))
+recovered.agg1<-group_by(conf.recovered,Country.Region=conf.recovered$Country.Region,Date=conf.recovered$Date)%>%summarise(Value=sum(Value))
+
+cases.method1<-data.frame(cases.agg[1:length(cases.agg)])
+cases.method2<-data.frame(cases.agg[1:length(cases.agg1)])
+print("Does the first and second method yield the same output for cases?")
+print(all(cases.method1==cases.method2))
+deaths.method1<-data.frame(deaths.agg[1:length(deaths.agg)])
+deaths.method2<-data.frame(deaths.agg[1:length(deaths.agg1)])
+print("Does the first and second method yield the same output for deaths?")
+print(all(deaths.method1==deaths.method2))
+recovered.method1<-data.frame(recovered.agg[1:length(recovered.agg)])
+recovered.methods2<-data.frame(recovered.agg1[1:length(recovered.agg1)])
+print("Does the first and the second method yield the same output for recovered?")
+print(all(recovered.method1==recovered.methods2))
+```
+#### d
+```{r}
+mar.cases<-cases.agg[which(cases.agg$Date=="2020-03-31"),]
+ordered.mar<-mar.cases[order(-mar.cases$Value),]
+mar.topten<-ordered.mar[seq(1:10),]
+dead<-rep(NA,10)
+mar.deaths<-deaths.agg[which(deaths.agg$Date=="2020-03-31"),]
+for(i in 1:10)
+{
+curr.country<-as.character(mar.topten$Country.Region[i])
+dead[i]<-mar.deaths[which(mar.deaths$Country.Region==curr.country),3]
+}
+mar.topten$deaths<-unlist(dead)
+setnames(mar.topten,"Value","cases")
+recovered<-rep(0,10)
+mar.recovered<-recovered.agg[which(recovered.agg$Date=="2020-03-31"),]
+for(j in 1:10)
+{
+curr.country<-as.character(mar.topten$Country.Region[j])
+recovered[j]<-mar.recovered[which(mar.recovered$Country.Region==curr.country),3]
+}
+mar.topten$recovered<-unlist(recovered)
+sick<-rep(0,10)
+for(k in 1:10)
+{
+sick[k]<-mar.topten$cases[k]-mar.topten$deaths[k]-mar.topten$recovered[k]
+}
+mar.topten$sick<-unlist(sick)
+topten.matrix<-matrix(nrow = 3,ncol = 10,dimnames = list(c("Sick","Recovered","Deaths"),c(as.character(mar.topten$Country.Region))))
+topten.matrix[1,]<-mar.topten$sick
+topten.matrix[2,]<-mar.topten$recovered
+topten.matrix[3,]<-mar.topten$deaths
+drawing<-barplot(topten.matrix,
+        main="Composition of the top 10 Countries by Corona Cases ",
+        ylab = "Confirmed Cases",
+        col = c("Dark Green", "#1b98e0", "Red"),
+        ylim = c(0,1.1*max(mar.topten$cases)),
+        cex.axis = 0.7,
+        cex.names = 0.6,
+        las=2
+)
+text(x=drawing,y=c(mar.topten$cases),label=c(mar.topten$cases), pos=3,cex=0.8, col="black")
+legend("topright",legend = c("Sick","Recovered","Dead"), fill = c("Dark Green", "#1b98e0", "Red"))
+```
+
+The main issue with stacked bar plot is that it becomes harder to compare the sizes of individual categories. For example, it's kind of hard to tell the difference between the number of recoveries of Italy, Germany and Iran. Additionally, it's hard to compare the sizes of the Dead from the US France and China.
+
+<br/><br/>  
+
+### Q2
+### Analysis of Daily New Corona Cases and Deaths  
+20 points
+
+The two datasets (Corona Cases and Deaths) register the value of cases and deaths, respectively, as a cumulative sum for each day. In this question we would like to understand the daily differences between consecutive days.     
+
+a. Add a new column named `Diff` to both the `cases.agg` and the `deaths.agg` data-frames. This new column should register the daily `Value` difference for each country. In other words, the `Diff` column shows how many new cases/deaths each country incurs every day. Hint - diff must be per country. (7pts)  
+b. Find the top 10 instances of country and date combinations with the greatest absolute number of new daily Corona cases and deaths (separately). Print the result in a descriptive format. (5pts)  
+c. In one figure, plot Italy's new daily Corona cases AND deaths as a function of Date. Choose the plot type you think that makes the most sense. (3pts) 
+d. Plot the same graph as in (c), but this time plot the number of new cases on the logarithm scale. What can we learn? (5pts)  
+
+  
+**Solution:** 
+<br/><br/>  
+
+### Q2
+<br/><br/>  
+
+#### a
+```{r}
+cases.agg$Diff<-c(0,diff(cases.agg$Value))
+cases.agg$Diff[cases.agg$Diff<0]<-0
+deaths.agg$Diff<-c(0,diff(deaths.agg$Value))
+deaths.agg$Diff[deaths.agg$Diff<0]<-0
+```
+#### b
+```{r}
+cases.sorted.dif<-cases.agg[order(-cases.agg$Diff),][seq(1:10),]
+cases.sorted.dif$Value<-NULL
+csf.data<-data.frame(row.names = seq(1:10), Country=cases.sorted.dif$Country.Region, Date=cases.sorted.dif$Date, New_Daily_Cases=cases.sorted.dif$Diff)
+print(csf.data)
+```
+### c
+```{r}
+italy.cases<-cases.agg[which(cases.agg$Country.Region=="Italy"),]
+italy.deaths<-deaths.agg[which(deaths.agg$Country.Region=="Italy"),]
+plot(x=italy.cases$Date,y=italy.cases$Diff,type='l',col="#1b98e0",
+xlab="Date",
+ylab="New Daily Values",
+ylim = c(0,1.1*max(c(italy.cases$Diff,italy.deaths$Diff))),
+main="Italy's New Daily Corona Cases And Deaths As a Function of Date",
+
+
+)
+lines(x=italy.deaths$Date,y=italy.deaths$Diff,col="red")
+legend("topleft",legend = c("Corona Cases","Corona Deaths"), fill = c("#1b98e0", "red"))
+
+```
+
+
+### d
+```{r}
+italy.cases<-cases.agg[which(cases.agg$Country.Region=="Italy"),]
+italy.deaths<-deaths.agg[which(deaths.agg$Country.Region=="Italy"),]
+plot(x=italy.cases$Date,y=2^(0:(length(italy.cases$Date)-1)),type='l',col="#1b98e0",
+xlab="Date",
+ylab="New Daily Values",
+ylim = c(0,2^85),
+main="Italy's New Daily Corona Cases And Deaths As a Function of Date"
+)
+lines(x=italy.deaths$Date,y=italy.deaths$Diff,col="red")
+legend("topleft",legend = c("Corona Cases","Corona Deaths"), fill = c("#1b98e0", "red"))
+```
+
+<br/>
+
+#### In the above plot, we graphed the same graph as in the previous question(2c), but with one difference. This time we plotted the graph of the new daily corona cases on the logarithmic scale. By carefully looking at the above graph we can see that according to the logarithmic interpretation the number of the new daily corona cases in Italy is shooting up exponentially and yet the number of deaths stays "relatively" constant.
+<br/>
+
+
+### Q3
+### Preparing and Analyzing the World Bank Data   
+25 points
+
+a. Rename the columns of `eco_data`: `country,S_country,feature,feature_code,Y2018V,Y2019V`. (2pts)  
+b. Create a new `eco` data-frame whose dimensions are $266 \times 11$. The first column should include the names of the countries in `eco_data.`   
+The rest of the columns should be the features with their respective values in `eco_data` for each country from 2018. Print the head of the new data-frame.(8pts)  
+c. Select and rename the following columns: `country` as country, `GDP(US currency)` as GDP, `Population ages 65 and above (% of total population)` as pop65, `Population in the largest city (% of urban population)` as pop_city_ratio, `Population, total` as pop_total columns .  (2pts) 
+d. Show a table of the five countries with the highest per capita GDP in 2018.     
+Next (considering all countries), plot the % of population over 65 vs. log of GDP per capita in 2018, after excluding the 10% countries with the lowest GDP per capita. Using `lm` and `abline`, add a regression line to the plot. What is your conclusion? (13 pts)  
+  
+  
+  
+**Solution:** 
+<br/><br/>  
+
+### a
+```{r}
+#loading the `eco_data`:
+eco_data <- read.csv(url("https://raw.githubusercontent.com/DataScienceHU/DataAnalysisR_2020/master/data/economic_data.csv"))
+names_col <- c("country","S_country","feature","feature_code","Y2018V","Y2019V")
+for(i in 1:6){
+  names(eco_data)[i] <- names_col[i]
+}
+```
+### b
+```{r}
+n<-dim(eco_data)[1]
+eco_d<-eco_data[1:(n-5),]
+eco.table <- data.table(Country = eco_d$country, feature = eco_d$feature ,Y2018V= eco_d$Y2018V)
+eco.table$Y2018V <- as.numeric(as.character(eco.table$Y2018V))
+eco <- dcast(eco.table, Country ~ feature ,value.var = 'Y2018V',fun.aggregate = sum ,na.rm=TRUE)
+head(eco)
+```
+### c
+```{r}
+names(eco)[1]<-"country"
+names(eco)[3]<-"GDP"
+names(eco)[6]<-"pop65"
+names(eco)[7]<-"pop_city_ratio"
+names(eco)[8]<-"pop_total"
+
+```
+### d
+```{r}
+
+eco$GDP.Percapita<-eco$GDP/eco$pop_total
+ordered.gdp<-eco[order(-eco$GDP.Percapita),]
+topfivegdp<-ordered.gdp[seq(1:5),]
+print(topfivegdp)
+indx<-floor(0.9*(length(ordered.gdp$GDP.Percapita)))
+trimmed.ordered<-ordered.gdp[1:indx]
+xvlaz<-log10(trimmed.ordered$GDP.Percapita)
+yvlaz<-trimmed.ordered$pop65
+plot(x=xvlaz,y=yvlaz,
+     main="Percent of Pop. Over 65 vs. Logarithm of GDP Per Capita in 2018",
+     xlab="Logarithm of GDP Per Capita in 2018",
+     ylab="Percent of Population over 65")
+abline(lm(yvlaz~xvlaz,trimmed.ordered))
+```
+
+
+
+#### From The above plot we can conclude that there is a positive correlation between the Logarithm of the GDP per capita in 2018 and the Percent of Population over 65 for an arbitrary country. Very unintuitive!
+
+<br/><br/>  
+
+
+### Q4
+### Joining the Datasets   
+20 points
+
+a. Join the `deaths.agg`, `cases.agg`, and `recovered.agg` into one data-frame called `corona`.(5pts)
+b. Join the `corona` and `eco` data-frames in a way that will keep the most information regarding the data (but not full join).   
+Make sure that no essential data is thrown away (show this). (3pts)
+c. Create new columns of normalized `cases`, `deaths`, and `recovered` so they will show the number of cases per 100,000 people for each country.   
+Using the last day of March as a reference, create a single stacked bar plot that visualizes the top 10 countries in terms of normalized Corona cases, and their respected normalized Corona deaths and recovered, as done in Q1.   
+how is it different from the graph before normalization? (5pts)
+d. Using the last day of March as a reference, create a scatter-plot of normalized deaths and cases vs. `pop65`. Limit the plot to show only countries with 15% or more of `pop65`.   
+In addition, color the outliers( pop65>24, norm100K_deaths>15) in that plot in red and add to the plot their country names (7pts)
+  
+  
+**Solution:**   
+<br/><br/>  
+
+### a
+```{r}
+corona <- full_join(full_join(recovered.agg,deaths.agg,by =c("Date","Country.Region"), copy = FALSE),cases.agg, by =c("Date","Country.Region"), copy = FALSE)
+names(corona)[6]<-"cases"
+names(corona)[7]<-"diff.cases"
+names(corona)[3]<-"recovered"
+names(corona)[5]<-"diff.deaths"
+names(corona)[4]<-"deaths"
+names(corona)[1]<-"country"
+```
+### b
+#### first, let's define what information is essential to us; The information that is essential to us is all of which concerns the countries whom are receiving daily updates from our source site (as a single country). By using (unique(corona$country)) we can save a vector of essential countries. Let's remember that the eco data set is including groups of countries (such as "Other small states", "Not classified", "Post-demographic dividend", etc.) as a single country, which makes the analysis exceedingly difficult. The latter shall be defined as unessential information.
+```{r}
+essential.countries.before<-c(as.character(unique(corona$country)))
+corona_n_eco<-left_join(corona,eco,by="country")
+print("Did we keep the essential infromation?")
+countries.after.join<-c(as.character(unique(corona_n_eco$country)))
+print(identical(countries.after.join,essential.countries.before))
+```
+The above code proves that we did not lose any essential information after using the left_join function on the corona and eco data sets. Since sometimes information can be thrown away when using the join functions, we had to make sure that we had the same countries before and after applying the join function. We stored the countries before the left_join in essential.countries.before and we stored the countries after the left_join in countries.after.join. We used the 'identical' function which is a base-r function  that checks if two objects are exactly equal. Since we got a TRUE from applying this function on countries.after.join and essential.countries.before we can safely say that we did not lose any country that we deemed essential.
+Additionally, we get this warning:
+"## Warning: Column `country` joining factors with different levels, coercing to"
+"## character vector"
+This is a warning and not an error, it tells us that the factors of eco and corona are not equal, since we applied the left_join function on x=corona and y=eco   (corona has a higher factor) all we got was repeating information from eco in each row of a unique country, this doesn't actually throw away information and doesn't bother us. let's print the head of corona_n_eco and note that all the columns which came from eco are the same(for any unique country).
+```{r}
+
+print(head(corona_n_eco))
+```
+### c
+```{r}
+corona_n_eco$norm.cases<-(corona_n_eco$cases/corona_n_eco$pop_total)*100000
+corona_n_eco$norm.deaths<-(corona_n_eco$deaths/corona_n_eco$pop_total)*100000
+corona_n_eco$norm.recovered<-(corona_n_eco$recovered/corona_n_eco$pop_total)*100000
+corona_n_eco$norm.sick<-corona_n_eco$norm.cases-corona_n_eco$norm.deaths-corona_n_eco$norm.recovered
+mar.norm.cases<-corona_n_eco[which(corona_n_eco$Date=="2020-03-31"),]
+ordered.mar.norm<-mar.norm.cases[order(-mar.norm.cases$norm.cases),]
+mar.norm.topten<-ordered.mar.norm[-1,]
+mar.norm.topten<-mar.norm.topten[1:10,]
+topten.matrix<-matrix(nrow = 3,ncol = 10,dimnames = list(c("Sick","Recovered","Deaths"),c(as.character(mar.norm.topten$country))))
+topten.matrix[1,]<-mar.norm.topten$norm.sick
+topten.matrix[2,]<-mar.norm.topten$norm.recovered
+topten.matrix[3,]<-mar.norm.topten$norm.deaths
+drawing<-barplot(topten.matrix,
+        main="Composition of the top 10 Countries by Normalized Corona Cases ",
+        ylab = "Confirmed Normalized Cases",
+        col = c("Dark Green", "#1b98e0", "Red"),
+        ylim = c(0,1.1*max(mar.norm.topten$norm.cases)),
+        cex.axis = 0.7,
+        cex.names = 0.6,
+        las=2
+)
+text(x=drawing,y=c(mar.norm.topten$norm.cases),label=c(floor(mar.norm.topten$norm.cases)), pos=3,cex=0.8, col="black")
+legend("topright",legend = c("Sick","Recovered","Dead"), fill = c("Dark Green", "#1b98e0", "Red"))
+
+
+
+```
+
+The graph is different because this time we get different countries and different values. With this graph we can tell the severity of the situation in a certain country with respect to its population size. In question one, we got "pure" numeric information for the top 10 countries with the most(absolute) cases, without any relation to population size or anything else. 
+
+<br/><br/>  
+
+
+#### d
+```{r}
+mar.norm.trimmed<-mar.norm.cases[which(mar.norm.cases$pop65>=15),]
+plot(x=mar.norm.trimmed$pop65, y=mar.norm.trimmed$norm.deaths, col=ifelse(mar.norm.trimmed$pop65>24 | mar.norm.trimmed$norm.deaths>15,"red","black"),ylim=c(0,200),xlab="Percent of Populaton Over 65",ylab="Normalised Values, Per 100k People",main="Normalised Deaths & Cases vs. Percent of Pop. over 65")
+points(x=mar.norm.trimmed$pop65,y=mar.norm.trimmed$norm.cases,col=ifelse(mar.norm.trimmed$pop65>24, "red","blue"))
+text(x=mar.norm.trimmed$pop65, y=mar.norm.trimmed$norm.deaths,labels=ifelse(mar.norm.trimmed$pop65>24 | mar.norm.trimmed$norm.deaths>15,as.character(mar.norm.trimmed$country),""),cex=0.8,pos=3,)
+legend("topright",legend = c("Normalised Cases","Normalised deaths","Outliers"), fill = c("Blue", "black","red"))
+
+```
+
+
+<br/><br/>  
+
+
+### Q5
+### Open Question
+10 points
+  
+Write an interesting research question regarding the Corona outbreak and then follow the steps to answer it using tables and plots. You can use the loaded datasets or any other dataset you find as long as you add the data file to your `lab1` repository so it can be loaded directly from a `url` (e.g. the World Bank). This question will be graded based on creativity, originality, and the novelty of the analysis.
+  
+**Solution:**
+Apple is a very popular American multinational technology company located in california that designs and sells consumer electronics, computer software and online services. Not long ago, Apple has released an apple mobility trends data set which contains requests for directions in apple maps.
+In this question we would like to explore the relationship between the Americans' mobility requests in apple maps and the spread of  covid-19. We will use our premade corona_n_cases dataset and Apple's csv. The Data provided by apple has three transportation types, driving, walking and transit. Firstly, We will explore the tranist transportation type since it includes being with other people in a closed space. This is the most 'dangerous' option. Note that the baseline of the data is 100. Let's take a snapshot of the data, starting at 2020-01-22 and ending at 2020-04-27.
+```{r}
+apple_data<-read.csv(url("https://raw.githubusercontent.com/Yoelboss/52414-lab-1-Benor_Yoel_and_Vialla_Dylan/master/applemobilitytrends-2020-04-27.csv"), comment.char="#")
+US_apple_data<-apple_data[which(apple_data$region=="United States"),]
+us_corona_data<-corona_n_eco[which(corona_n_eco$country=="US"),]
+n<-dim(us_corona_data)[1]
+us_corona_data<-us_corona_data[us_corona_data$Date> as.Date("2020-01-21") & us_corona_data$Date<as.Date("2020-04-28"),]# delete the bad dates rows
+US_apple_data <- US_apple_data[,-c(5:13)]# delete the bad dates columns
+#Now we have to play around with our US_apple_data data frame because the dates are actually the labels of the columns while our dates in the us_corona_data are under the Date column
+#Let's plot normalised Corona cases to match Apple's Baseline values of 100.
+plot(x=us_corona_data$Date,y=us_corona_data$cases/1000,type="l",col="green",ylim=c(0,200),
+     xlab = "Date",ylab="Values, normalised to mobility - Transit",main="The Use of Transit Option on Apple Maps and Corona Cases vs. Date")
+us.apple.data.values<-US_apple_data[which(US_apple_data$transportation_type=="transit"),5:101]
+lines(x=us_corona_data$Date,y=us.apple.data.values,col="purple")
+legend("topleft",legend = c("Corona Cases","Apple maps - Transit"), fill = c("green","purple"))
+```
+
+<br/><br/>  
+Interesting, we can clearly see from this plot that there is a clear relationship between people's use of apple maps' public transit option and the number of Corona Virus cases. We are guessing that the relationship comes from the easily accessible information about the number of corona cases, which appears on every news site.
+Now, we'd like to explore the next option, the "Driving" option on apple maps. let's see what we get:
+
+```{r}
+plot(x=us_corona_data$Date,y=us_corona_data$cases/1000,type="l",col="green",ylim=c(0,200),
+     xlab = "Date",ylab="Values, normalised to mobility - Driving",main="The Use of Driving Option on Apple Maps and Corona Cases vs. Date")
+us.apple.data.values<-US_apple_data[which(US_apple_data$transportation_type=="driving"),5:101]
+lines(x=us_corona_data$Date,y=us.apple.data.values,col="blue")
+legend("topleft",legend = c("Corona Cases","Apple maps - Driving"), fill = c("green","blue"))
+```
+<br/><br/> 
+From the above plot we can see that people are probably getting "bored" during the quarantine and are slowly but surely starting to use their cars more and more. Hence the apple maps driving requests. Despite the fact that the corona cases are also growing. This is an interesting find, people are feeling safer the longer the quarantine goes on. Now we shall inspect the last category of transportation that Apple has provided us, the "walking" option. Let's see what we get:
+```{r}
+plot(x=us_corona_data$Date,y=us_corona_data$cases/1000,type="l",col="green",ylim=c(0,200),
+     xlab = "Date",ylab="Values, normalised to mobility - Walking",main="The Use of Walking Option on Apple Maps and Corona Cases vs. Date")
+us.apple.data.values<-US_apple_data[which(US_apple_data$transportation_type=="walking"),5:101]
+lines(x=us_corona_data$Date,y=us.apple.data.values,col="red")
+legend("topleft",legend = c("Corona Cases","Apple maps - Walking"), fill = c("green","red"))
+```
+<br/><br/> 
+From the Above plot we can infer that the Corona Cases actually changed people's walking habits. Americans' use of the "walking" option on Apple maps took a deep dive and has stayed relatively constant, but slowly going back up. 
+
+
+
+Okay, this is interesting, but what does it mean for Apple? are people actually using Apple Maps less because of the Corona Cases or is the use of the "driving" option actually negating the "transit" option?(the "Walking" option could also, in a way, help negate the "transit" option, since it's slowly going back up). Since Apple hasn't provided any pure absolute numbers, we will Average the "transit", "walking" and "driving" values and create an "Overall" value of our own, and see what we get:
+```{r}
+Overall<-((US_apple_data[which(US_apple_data$transportation_type=="walking"),5:101])+US_apple_data[which(US_apple_data$transportation_type=="driving"),5:101]+US_apple_data[which(US_apple_data$transportation_type=="transit"),5:101])/3
+plot(x=us_corona_data$Date,y=us_corona_data$cases/1000,type="l",col="green",ylim=c(0,200),
+     xlab = "Date",ylab="Values, normalised to Overall Use",main="The Overall Use of Apple Maps and Corona Cases vs. Date")
+lines(x=us_corona_data$Date,y=Overall,col="darkcyan")
+legend("topleft",legend = c("Corona Cases","Apple maps - Overall Use"), fill = c("green","darkcyan"))
+```
+<br/><br/> 
+Very cool!
+From this graph we can see that the overall Usage of the Apple Maps' application(in America) is going down while the corona cases in America Go up. We can see a decline of the overall usage of the app by around 50% by late march. This information could be handy to Apple because it might help them come to up with financial and economic conclusions on how to proceed with that application and its maintenance.
+<br/><br/> 
+In Summary:
+We used Apple's Apple maps csv to analyse the data in relation to the corona cases in the USA.
+We found out that people used less  the public transit option of the app while the corona cases spread to more and more people.
+We found out that when the Corona cases started to go up, people used less the driving option of apple maps, but after a while people started using that option more and more, and as far as we can tell that trend is continuing.
+We found out that people used less the walking option of apple maps the more the corona virus epidemic spread, but by april there was a slight trend to use it more and more as time goes on.
+Finally, we discovered that the Apple Maps application (in the USA) had around 50% decrease in usage by late march.
+
+
+<br/><br/> 
+
+
+Yoel ben or 207026618
+Dylan Vialla 342532579
+
+
+
